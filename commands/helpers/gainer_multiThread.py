@@ -1,8 +1,8 @@
 import math
-import time
 import pandas as pd
 import concurrent.futures
-from filter_gainers import download_data
+from commands.helpers.filter_gainers import download_data
+from commands.helpers.utility import format_percentage, format_large_num, normalize_ticker
 
 def chunked(seq, n_chunks):
     n = max(1, n_chunks)
@@ -14,7 +14,7 @@ def _process_chunk(tickers_chunk):
     for t in tickers_chunk:
         try:
             # Expect download_data to return: (ticker, pct_change_float, market_cap_float, volume_float_or_int)
-            sym, pct, mcap, vol = download_data(t)
+            sym, pct, mcap, vol = download_data(normalize_ticker(t))
             rows.append((sym, pct, mcap, vol))
         except Exception as e:
             # Swallow per-ticker errors; log if you want
@@ -24,7 +24,7 @@ def _process_chunk(tickers_chunk):
         # time.sleep(0.02)
     return rows
 
-def getGainers_mt(tickers: list[str], min_market_cap=1e9, workers: int = 6) -> pd.DataFrame:
+def getGainers_mt(tickers: list[str], min_market_cap=1e9, workers: int = 4) -> pd.DataFrame:
     """
     Multithreaded gainers fetch.
     - Partitions tickers into `workers` chunks
@@ -55,35 +55,11 @@ def getGainers_mt(tickers: list[str], min_market_cap=1e9, workers: int = 6) -> p
     # Sort by pct change desc
     filtered.sort(key=lambda r: r[1], reverse=True)
 
-    # Formatters
-    def format_percentage(v):
-        try: return f"{float(v)*100:.2f}%"
-        except: return "—"
 
-    def format_market_cap(v):
-        try:
-            v = float(v)
-            if v >= 1e12: return f"{v/1e12:.2f}T"
-            if v >= 1e9:  return f"{v/1e9:.2f}B"
-            if v >= 1e6:  return f"{v/1e6:.2f}M"
-            if v >= 1e3:  return f"{v/1e3:.2f}K"
-            return f"{v:.2f}"
-        except:
-            return "—"
-
-    def format_volume(v):
-        try:
-            v = float(v)
-            if v >= 1e12: return f"{v/1e12:.2f}T"
-            if v >= 1e9:  return f"{v/1e9:.2f}B"
-            if v >= 1e6:  return f"{v/1e6:.2f}M"
-            return f"{v:,.0f}"
-        except:
-            return "—"
 
     # Build final rows with display strings
     display = [
-        (t, format_percentage(pct), format_market_cap(mcap), format_volume(vol))
+        (t, format_percentage(pct), format_large_num(mcap), format_large_num(vol))
         for (t, pct, mcap, vol) in filtered
     ]
 

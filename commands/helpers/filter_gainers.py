@@ -1,32 +1,7 @@
 import yfinance as yf
 import pandas as pd
 import logging
-import concurrent.futures
-import random
-import time
-def format_market_cap(value):
-    """
-    Format the market cap value into a readable form with T, B, or M suffix.
-
-    Args:
-        value (float): The market cap value.
-
-    Returns:
-        str: Formatted market cap.
-    """
-    if value >= 1e12:  # Trillions
-        return f"{value / 1e12:.2f}T"
-    elif value >= 1e9:  # Billions
-        return f"{value / 1e9:.2f}B"
-    elif value >= 1e6:  # Millions
-        return f"{value / 1e6:.2f}M"
-    elif value >= 1e3:  # Thousands
-        return f"{value / 1e3:.2f}K"
-    else:
-        return f"{value:.2f}"
-
-def format_percentage(value):
-    return f"{value * 100:.2f}%"
+from commands.helpers.utility import format_percentage, format_large_num, normalize_ticker
 
 def getsp500():
     """
@@ -41,15 +16,13 @@ def getsp500():
 
 
 
-def _normalize_symbol(t: str) -> str:
-    return t.replace('.', '-').upper().strip()
 
 def download_data(ticker):
     """
     Get current % change (incl pre/post) vs previous RTH close
     and market cap using only fast_info.
     """
-    ticker = _normalize_symbol(ticker)
+    ticker = normalize_ticker(ticker)
     try:
         ti = yf.Ticker(ticker)
         fi = ti.fast_info
@@ -98,7 +71,7 @@ def getGainers(tickers: list[str], min_market_cap=1e9):
 
     #sort the list by premarket change, then reformat the premarket change
     sorted_data = sorted(filtered_data, key=lambda x: x[1], reverse=True)
-    sorted_data = [(tckr, format_percentage(pct_change), format_market_cap(market_cap), format_market_cap(volume)) for tckr, pct_change, market_cap, volume in sorted_data]
+    sorted_data = [(tckr, format_percentage(pct_change), format_large_num(market_cap), format_large_num(volume)) for tckr, pct_change, market_cap, volume in sorted_data]
 
     # Convert to DataFrame for better readability
     result_df = pd.DataFrame(sorted_data, columns=['Tckr', 'Premkt Chg', 'Mkt Cap', 'Volume'])

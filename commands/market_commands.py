@@ -17,6 +17,9 @@ class MarketCommands(commands.Cog):
 
     @commands.command(name='eps', help='Returns the EPS of a given ticker for the past five years')
     async def eps(self, ctx, ticker: str):
+        if not ticker:
+            await ctx.send("Please provide a ticker symbol. Example: `!eps AAPL`")
+            return
         await ctx.send(f"Fetching Diluted EPS data for {ticker}")
         df = mh.get_eps(ticker)
         if df is not None:
@@ -59,6 +62,18 @@ class MarketCommands(commands.Cog):
         log_alert(body)
 
         await ctx.send(f"```txt\n{body}\n```")
+    @commands.command()
+    async def m2(self, ctx, periods: int = 7):
+        """Returns the M2 Money Stock data. Monthly, specify the number of periods to return. 5 by default."""
+        await ctx.send("Fetching M2 Money Stock data...")
+        
+        df = mh.m2_data(periods)
+        if df is not None and not df.empty:
+            # Convert DataFrame to string format
+            body = df.to_string()
+            await ctx.send(f"```txt\n{body}\n```")
+        else:
+            await ctx.send("Failed to retrieve M2 Money Supply data.")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(MarketCommands(bot))

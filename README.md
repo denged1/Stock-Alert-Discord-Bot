@@ -1,5 +1,5 @@
 # Stock Alert Discord Bot
-Discord bot to give pre-market notifications on SP biggest movers
+Discord bot to give pre-market notifications on SP biggest movers 15 minutes before the market opens
 
 
 Make sure to update yfinance, I had a headache with that.

@@ -15,13 +15,13 @@ def format_market_cap(value):
         str: Formatted market cap.
     """
     if value >= 1e12:  # Trillions
-        return f"{value / 1e12:.2f} T"
+        return f"{value / 1e12:.2f}T"
     elif value >= 1e9:  # Billions
-        return f"{value / 1e9:.2f} B"
+        return f"{value / 1e9:.2f}B"
     elif value >= 1e6:  # Millions
-        return f"{value / 1e6:.2f} M"
+        return f"{value / 1e6:.2f}M"
     elif value >= 1e3:  # Thousands
-        return f"{value / 1e3:.2f} K"
+        return f"{value / 1e3:.2f}K"
     else:
         return f"{value:.2f}"
 
@@ -68,10 +68,10 @@ def download_data(ticker):
             last_price = fi._prices_1wk_1h_prepost['Close'].iloc[-1]
 
         pct_change = (last_price / prev_close) - 1
-        return ticker, pct_change, prev_close, last_price, market_cap, volume
+        return ticker, pct_change, market_cap, volume
     except Exception as e:
         logging.warning(f"Error processing {ticker}: {e}")
-        return ticker, None, None, None, None, None
+        return ticker, None, None, None
 
 
 
@@ -94,34 +94,14 @@ def getGainers(tickers: list[str], min_market_cap=1e9):
     for ticker in tickers:
         filtered_data.append(download_data(ticker))
     #filter results and prepare for DataFrame
-    filtered_data = [(ticker, pct_change, prev_close, last_price, market_cap, volume) for ticker, pct_change, prev_close, last_price, market_cap, volume in filtered_data if market_cap and pct_change and market_cap > min_market_cap]
+    filtered_data = [(ticker, pct_change, market_cap, volume) for ticker, pct_change, market_cap, volume in filtered_data if market_cap and pct_change and market_cap > min_market_cap]
 
     #sort the list by premarket change, then reformat the premarket change
     sorted_data = sorted(filtered_data, key=lambda x: x[1], reverse=True)
-    sorted_data = [(tckr, format_percentage(pct_change), format_market_cap(market_cap), f"{prev_close:.2f}", f"{last_price:.2f}", format_market_cap(volume)) for tckr, pct_change, prev_close, last_price, market_cap, volume in sorted_data]
+    sorted_data = [(tckr, format_percentage(pct_change), format_market_cap(market_cap), format_market_cap(volume)) for tckr, pct_change, market_cap, volume in sorted_data]
 
     # Convert to DataFrame for better readability
-    result_df = pd.DataFrame(sorted_data, columns=['Tckr', 'Premkt Chg', 'Mkt Cap', 'Prev Close', 'Last Price', 'Volume'])
+    result_df = pd.DataFrame(sorted_data, columns=['Tckr', 'Premkt Chg', 'Mkt Cap', 'Volume'])
 
     return result_df
 
-
-'''
-
-        try:
-            # Fetch premarket data
-            data = yf.download(ticker, period="1d", prepost=True)
-            
-            # Calculate premarket change
-            premarket_change = (data['Close'].iloc[-1] / data['Open'].iloc[-1] - 1)
-            
-            # Get market cap information
-            market_cap = yf.Ticker(ticker).info['marketCap']
-
-            # Check if market cap meets minimum and add to list if so
-            if market_cap > min_market_cap:
-                filtered_data.append((ticker, premarket_change, format_market_cap(market_cap)))
-            logging.debug(f"{ticker}: {premarket_change}, {format_market_cap(market_cap)}")
-        except Exception as e:
-            logging.warning(f"Error processing {ticker}: {e}")
-'''

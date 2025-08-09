@@ -1,5 +1,8 @@
 import os
+import io
+
 import discord
+from discord import File
 from discord.ext import commands
 import asyncio
 from datetime import datetime, timedelta
@@ -9,7 +12,10 @@ import pytz
 import logging
 logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s %(message)s')
 import pandas as pd
+
 import filter_gainers
+import gainer_multiThread as gainer_mt
+
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
@@ -35,7 +41,7 @@ EST = pytz.timezone("US/Eastern")
 async def alert_loop():
     while True:
         now = datetime.now(EST)
-        target = now.replace(hour=8, minute=50, second=0, microsecond=0)
+        target = now.replace(hour=8, minute=45, second=0, microsecond=0)
 
         if now >= target:
             target += timedelta(days=1)
@@ -66,16 +72,14 @@ async def send_alert():
     combined_rows = pd.concat([top_rows, bottom_rows]).drop_duplicates()
 
     end = time.time()
-    elapsed = (f"Time taken: {end - start} seconds.")
+    elapsed = (f"Time taken: {(end - start):.2f} seconds.")
 
     #convert the combined DataFrame to a string without the index, also formatting the columns
     body = combined_rows.to_string(index=False, formatters={
     'Tckr': lambda x: f"{x:<6}",
-    'Premkt Chg': lambda x: f"{x:<12}",
-    'Mkt Cap': lambda x: f"{x:<10}",
-    'Prev Close': lambda x: f"{x:<12}",
-    'Last Price': lambda x: f"{x:<12}",
-    'Volume': lambda x: f"{x:<12}"
+    'Premkt Chg': lambda x: f"{x:<7}",
+    'Mkt Cap': lambda x: f"{x:<7}",
+    'Volume': lambda x: f"{x:<7}"
     })
 
     body += f"\n\n{elapsed}"
@@ -101,7 +105,8 @@ async def top5(ctx):
     #tickers = ["tsla", "aapl", "msft", "googl", "amzn"]  # Example tickers, replace with actual S&P 500 tickers
     tickers = filter_gainers.getsp500()
     # Use asyncio.to_thread to run the blocking function in a separate thread
-    df = await asyncio.to_thread(filter_gainers.getGainers, tickers)
+    #df = await asyncio.to_thread(filter_gainers.getGainers, tickers)
+    df = await asyncio.to_thread(gainer_mt.getGainers_mt, tickers)
 
     #get the first and last five rows
     top_rows = df.head(5)
@@ -111,16 +116,14 @@ async def top5(ctx):
     combined_rows = pd.concat([top_rows, bottom_rows]).drop_duplicates()
 
     end = time.time()
-    elapsed = (f"Time taken: {end - start} seconds.")
+    elapsed = (f"Time taken: {(end - start):.2f} seconds.")
 
     #convert the combined DataFrame to a string without the index, also formatting the columns
     body = combined_rows.to_string(index=False, formatters={
-    'Tckr': lambda x: f"{x:<6}",
-    'Premkt Chg': lambda x: f"{x:<12}",
-    'Mkt Cap': lambda x: f"{x:<10}",
-    'Prev Close': lambda x: f"{x:<12}",
-    'Last Price': lambda x: f"{x:<12}",
-    'Volume': lambda x: f"{x:<12}"
+    'Tckr': lambda x: f"{x:<5}",
+    'Premkt Chg': lambda x: f"{x:<7}",
+    'Mkt Cap': lambda x: f"{x:<7}",
+    'Volume': lambda x: f"{x:<7}"
     })
 
     body += f"\n\n{elapsed}"

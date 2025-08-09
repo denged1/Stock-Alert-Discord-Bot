@@ -1,0 +1,5 @@
+/.env
+/alerts_archive.txt
+/channels.txt
+/test.py
+/log.txt

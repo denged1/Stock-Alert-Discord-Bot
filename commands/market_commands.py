@@ -67,7 +67,7 @@ class MarketCommands(commands.Cog):
         """Returns the M2 Money Stock data. Monthly, specify the number of periods to return. 7 by default. Example: `!m2 10`"""
         await ctx.send("Fetching M2 Money Stock data...")
         
-        df = mh.m2_data(periods)
+        df = mh.m2_data(periods) ##########
         if df is not None and not df.empty:
             # Convert DataFrame to string format
             body = df.to_string()
@@ -82,7 +82,7 @@ class MarketCommands(commands.Cog):
             return
         ticker = normalize_ticker(ticker)
         await ctx.send(f"Fetching analyst price targets for {ticker}")
-        df = mh.get_price_targets(ticker)
+        df = mh.get_price_targets(ticker) ##########
         if df is not None:
             await ctx.send(f"```txt\n{df.to_string(index=True)}\n```")
         else:
@@ -93,9 +93,9 @@ class MarketCommands(commands.Cog):
         if not ticker:
             await ctx.send("Please provide a ticker symbol. Example: `!holders AAPL`")
             return
-        ticker = normalize_ticker(ticker)
+        ticker = normalize_ticker(ticker) 
         await ctx.send(f"Fetching major holders data for {ticker}")
-        df = mh.get_major_holders(ticker)
+        df = mh.get_major_holders(ticker) ##########
         if df is not None:
             await ctx.send(f"```txt\n{df.to_string(index=True)}\n```")
         else:

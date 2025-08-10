@@ -23,6 +23,51 @@ def get_eps(ticker: str) -> pd.DataFrame:
         print(f"Error fetching EPS data for {ticker}: {e}")
         return None
     
+def get_price_targets(ticker: str) -> pd.DataFrame:
+    """
+    Fetch analyst price targets for a given ticker.
+    Args:
+        ticker (str): The stock ticker symbol.
+    Returns:
+        pd.DataFrame: DataFrame containing the analyst price targets or None if retrieval fails.
+    """
+    try:
+        price_targets = yf.Ticker(ticker).analyst_price_targets
+        #use is None since .analyst_price_targets is a Dict, and Dict doesn't have an empty attribute
+        if price_targets is None:
+            return None
+        # Format the DataFrame as needed
+        df = {"Last Price": price_targets['current'],
+            "Mean Target": price_targets['mean'],
+            "Median Target": price_targets['median'],
+            "High Target": price_targets['high'],
+            "Low Target": price_targets['low']}
+        return pd.DataFrame(df, index=[ticker])
+    except Exception as e:
+        print(f"Error fetching analyst price targets for {ticker}: {e}")
+        return None
+    
+def get_major_holders(ticker: str) -> pd.DataFrame:
+    """
+    Fetch major holders data for a given ticker.
+    Args:
+        ticker (str): The stock ticker symbol.
+    Returns:
+        pd.DataFrame: DataFrame containing the major holders data or None if retrieval fails.
+    """
+    try:
+        major_holders = yf.Ticker(ticker).major_holders
+        if major_holders.empty:
+            return None
+        # the loc method returns a Series, so we access the first element with .iloc[0]
+        df = {"Insiders": format_percentage(major_holders.loc['insidersPercentHeld'].iloc[0]),
+            "Institutions": format_percentage(major_holders.loc['institutionsPercentHeld'].iloc[0]),
+            "# of Institutions": f"{major_holders.loc['institutionsCount'].iloc[0]:.0f}"}
+        return pd.DataFrame(df, index=[ticker])
+    except Exception as e:
+        print(f"Error fetching major holders for {ticker}: {e}")
+        return None
+    
 def m2_data(periods: int) -> pd.DataFrame:
     """
     Fetch M2 Money Stock data from FRED.

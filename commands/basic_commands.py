@@ -33,6 +33,9 @@ class BasicCommands(commands.Cog):
                     f.write(line)
         await ctx.send("This channel has been removed from daily alerts!")
 
+    @commands.command(name='fud', help='self explanatory')
+    async def fud(self, ctx):
+        await ctx.send("Okay okay okay, I need the price to go up. I can't take this anymore. Every day, I'm checking the price and it's dipping. Every day, I check the price - bad price. I can't take this anymore, man. I have overinvested - by a lot. It is what it is. I need the price to go up. Can devs do something?")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(BasicCommands(bot))

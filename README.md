@@ -1,8 +1,17 @@
 # Stock Alert Discord Bot
 Discord bot to give pre-market notifications on SP biggest movers 15 minutes before the market opens
 
+Commands:
 
-If you want the daily alert, make sure to run !setchannel in the channel you want it. Also it runs really slow bc of yfinance api limits. (Like a minute for the !top5 command)
+Market Commands:
+!eps [tcker] - Quarterly diluted EPS that contains all non NaN values from yfinance
+!m2 [periods] - Monthly M2 Money Supply from present to Jan 1, 2000. Periods specifies how many periods back
+!holders [tcker] - Shows percent ownership of equity by insider and institutional investors.
+!price_target [tcker] - Shows stat data on analyst price targets for a stock as well as its latest price
+!top5 - Returns the top 5 gainers/losers in the SP500, slow and can take upwards of a full minute.
+
+
+If you want the daily alert, make sure to run !setchannel in the channel you want it. 
 
 Make sure to update yfinance, I had a headache with that.
 

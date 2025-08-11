@@ -2,6 +2,7 @@ import time
 import pandas as pd
 import discord
 from discord.ext import commands
+import io
 
 import commands.helpers.filter_gainers as filter_gainers
 import commands.helpers.gainer_multiThread as gainer_mt
@@ -37,37 +38,39 @@ class MarketCommands(commands.Cog):
             # Handle other errors or raise
             raise error
         
+    async def _build_top5_png(self) -> tuple[bytes, str]:
+        """Compute top/bottom-5 table once and return (png_bytes, elapsed_text)."""
+        start = time.time()
+        tickers = filter_gainers.getsp500()
+
+        # Using non-multithreaded for testing, has less issues with getting ticker info after
+        #df = await ctx.bot.loop.run_in_executor(None, filter_gainers.getGainers, tickers)
+
+        # Using multithreaded version for speed
+        df = await self.bot.loop.run_in_executor(None, gainer_mt.getGainers_mt, tickers)
+
+        # get the first and last five rows
+        top_rows = df.head(5)
+        bottom_rows = df.tail(5)
+        combined_rows = pd.concat([top_rows, bottom_rows]).drop_duplicates()
+
+        elapsed = f"Time taken: {(time.time() - start):.2f} seconds."
+        buf = ph.plot_top5(combined_rows)   # returns BytesIO
+        png_bytes = buf.getvalue()
+        buf.close()
+
+        log_alert(elapsed)
+        return png_bytes, elapsed
 
     @commands.command()
     async def top5(self, ctx):
         """Returns the current top 5 movers in the S&P 500."""
         await ctx.send("Fetching current market data (this will take a few minutes)...")
-
-        start = time.time()
-        #tickers = ["tsla", "aapl", "msft", "googl", "amzn"]  # Example tickers, replace with actual S&P 500 tickers
-        tickers = filter_gainers.getsp500()
-        # Use asyncio.to_thread to run the blocking function in a separate thread
-        #df = await asyncio.to_thread(filter_gainers.getGainers, tickers)
-
-        # Using non-multithreaded for testing, has less issues with getting ticker info after
-        df = await ctx.bot.loop.run_in_executor(None, filter_gainers.getGainers, tickers)
-
-        #get the first and last five rows
-        top_rows = df.head(5)
-        bottom_rows = df.tail(5)
-
-        #combine them into a single DataFrame
-        combined_rows = pd.concat([top_rows, bottom_rows]).drop_duplicates()
-
-        end = time.time()
-        elapsed = (f"Time taken: {(end - start):.2f} seconds.")
-        image_buffer = ph.plot_top5(combined_rows)
-
-        # Send the image buffer as a Discord file
-        image_buffer.seek(0)
-        file = discord.File(fp=image_buffer, filename="premkt_table.png")
-        log_alert(elapsed)
+        png_bytes, elapsed = await self._build_top5_png()
+        file = discord.File(fp=io.BytesIO(png_bytes), filename="premkt_table.png")
         await ctx.send(file=file)
+
+
 
     @commands.command()
     async def m2(self, ctx, periods: int = 7):

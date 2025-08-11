@@ -1,13 +1,11 @@
 import asyncio
 from datetime import datetime, timedelta
-import time
 import logging
 import pytz
-import pandas as pd
+import discord
+import io
 from discord.ext import commands
 
-import commands.helpers.filter_gainers as filter_gainers
-import commands.helpers.gainer_multiThread as gainer_mt  # available if you want to switch later
 
 from .helpers.utility import log_alert, is_trading_day
 
@@ -53,42 +51,29 @@ class AlertCog(commands.Cog):
                 logging.info("Market is closed today.")
 
     async def send_alert(self):
-        start = time.time()
-        tickers = filter_gainers.getsp500()
-        # If you prefer multithreaded version, switch to gainer_mt.getGainers_mt
-        #df = await asyncio.to_thread(filter_gainers.getGainers, tickers)
-        df = await asyncio.to_thread(gainer_mt.getGainers_mt, tickers)
+        mc = self.bot.get_cog("MarketCommands")
+        if mc is None:
+            logging.error("MarketCommands cog is not loaded; cannot send alert.")
+            return
 
-        #get the first and last five rows
-        top_rows = df.head(5)
-        bottom_rows = df.tail(5)
+        # 1) Build once
+        png_bytes, elapsed = await mc._build_top5_png()
+        header = f"**{datetime.now().strftime('%Y-%m-%d')} Pre-Market Movers**"
 
-        #combine them into a single DataFrame
-        combined_rows = pd.concat([top_rows, bottom_rows]).drop_duplicates()
-
-        end = time.time()
-        elapsed = (f"Time taken: {(end - start):.2f} seconds.")
-
-        #convert the combined DataFrame to a string without the index, also formatting the columns
-        body = combined_rows.to_string(index=False, formatters={
-        'Tckr': lambda x: f"{x:<6}",
-        'Premkt Chg': lambda x: f"{x:<7}",
-        'Mkt Cap': lambda x: f"{x:<7}",
-        'Volume': lambda x: f"{x:<7}"
-        })
-
-        body += f"\n\n{elapsed}"
-        #log alert to csv
-        log_alert(body)
-
+        # 2) Fan out to channels using fresh wrappers
         with open("channels.txt") as f:
             for line in f:
                 guild_id, channel_id = map(int, line.strip().split(","))
                 channel = self.bot.get_channel(channel_id)
-                if channel:
-                    logging.info(f"Sending alert to guild {guild_id}, channel {channel_id}")
-                    await channel.send(f"**{datetime.now().strftime('%Y-%m-%d')} Pre-Market Movers**\n```txt\n{body}\n```")
+                if not channel:
+                    logging.warning(f"Channel {channel_id} not found.")
+                    continue
 
+                logging.info(f"Sending alert to guild {guild_id}, channel {channel_id}")
+                file = discord.File(fp=io.BytesIO(png_bytes), filename="premkt_table.png")
+                await channel.send(content=f"{header}\n`{elapsed}`", file=file)
 
+        # 3) Optional explicit cleanup (not strictly necessary)
+        del png_bytes
 async def setup(bot: commands.Bot):
     await bot.add_cog(AlertCog(bot))

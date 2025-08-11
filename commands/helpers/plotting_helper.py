@@ -330,7 +330,7 @@ def plot_info(df):
     table.set_fontsize(10)
     table.scale(1.3, 1.3)
 
-    plt.title(f"Company Info: {info_dict.get('Company Name', '')}",
+    plt.title(f"{info_dict.get('Company Name', '')}",
               fontsize=14, fontweight='bold', pad=15)
 
     buf = io.BytesIO()

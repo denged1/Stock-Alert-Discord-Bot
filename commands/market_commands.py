@@ -138,10 +138,11 @@ class MarketCommands(commands.Cog):
     async def info(self, ctx, ticker: str):
         ticker = normalize_ticker(ticker) 
         await ctx.send(f"Fetching company info for {ticker}")
-        df = mh.get_info(ticker) ##########
+        df, link = mh.get_info(ticker) ##########
         if df is not None:
             file = ph.plot_info(df)
             await ctx.send(file=discord.File(file, filename="info.png"))
+            await ctx.send(link)
         else:
             await ctx.send("Failed to retrieve major holders data.")
 

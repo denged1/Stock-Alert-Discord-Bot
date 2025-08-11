@@ -1,10 +1,12 @@
 import time
 import pandas as pd
+import discord
 from discord.ext import commands
 
 import commands.helpers.filter_gainers as filter_gainers
 import commands.helpers.gainer_multiThread as gainer_mt
 import commands.helpers.market_helper as mh
+import commands.helpers.plotting_helper as ph
 
 from .helpers.utility import log_alert, format_large_num, format_percentage, normalize_ticker
 
@@ -17,27 +19,38 @@ class MarketCommands(commands.Cog):
 
     @commands.command(name='eps', help='Returns the EPS of a given ticker for the past five years. Example: `!eps AAPL`')
     async def eps(self, ctx, ticker: str):
-        if not ticker:
-            await ctx.send("Please provide a ticker symbol. Example: `!eps AAPL`")
-            return
         await ctx.send(f"Fetching Diluted EPS data for {ticker}")
         df = mh.get_eps(ticker)
         if df is not None:
-            await ctx.send(f"```txt\n{df.to_string(index=False)}\n```")
+            image_buffer = ph.plot_eps(df, ticker)
+            file = discord.File(fp=image_buffer, filename="eps_chart.png")
+            await ctx.send(file=file)
         else:
             await ctx.send("Failed to retrieve EPS data.")
+        
+    # Error handling has to be done like this
+    @eps.error
+    async def eps_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("Please provide a ticker symbol. Example: `!eps AAPL`")
+        else:
+            # Handle other errors or raise
+            raise error
+        
 
     @commands.command()
     async def top5(self, ctx):
         """Returns the current top 5 movers in the S&P 500."""
-        await ctx.send("Fetching current market data...")
+        await ctx.send("Fetching current market data (this will take a few minutes)...")
 
         start = time.time()
         #tickers = ["tsla", "aapl", "msft", "googl", "amzn"]  # Example tickers, replace with actual S&P 500 tickers
         tickers = filter_gainers.getsp500()
         # Use asyncio.to_thread to run the blocking function in a separate thread
         #df = await asyncio.to_thread(filter_gainers.getGainers, tickers)
-        df = await ctx.bot.loop.run_in_executor(None, gainer_mt.getGainers_mt, tickers)
+
+        # Using non-multithreaded for testing, has less issues with getting ticker info after
+        df = await ctx.bot.loop.run_in_executor(None, filter_gainers.getGainers, tickers)
 
         #get the first and last five rows
         top_rows = df.head(5)
@@ -48,58 +61,96 @@ class MarketCommands(commands.Cog):
 
         end = time.time()
         elapsed = (f"Time taken: {(end - start):.2f} seconds.")
+        image_buffer = ph.plot_top5(combined_rows)
 
-        #convert the combined DataFrame to a string without the index, also formatting the columns
-        body = combined_rows.to_string(index=False, formatters={
-        'Tckr': lambda x: f"{x:<5}",
-        'Premkt Chg': lambda x: f"{x:<7}",
-        'Mkt Cap': lambda x: f"{x:<7}",
-        'Volume': lambda x: f"{x:<7}"
-        })
+        # Send the image buffer as a Discord file
+        image_buffer.seek(0)
+        file = discord.File(fp=image_buffer, filename="premkt_table.png")
+        log_alert(elapsed)
+        await ctx.send(file=file)
 
-        body += f"\n\n{elapsed}"
-        #log alert to csv
-        log_alert(body)
-
-        await ctx.send(f"```txt\n{body}\n```")
     @commands.command()
     async def m2(self, ctx, periods: int = 7):
         """Returns the M2 Money Stock data. Monthly, specify the number of periods to return. 7 by default. Example: `!m2 10`"""
         await ctx.send("Fetching M2 Money Stock data...")
         
+        # proofing for theo
+        if periods > 80:
+            periods = 80
+            await ctx.send("`periods` must be between 1 and 80. Testing with 80...")
+        if periods < 1:
+            periods = 7
+            await ctx.send("`periods` must be between 1 and 80. Testing with 1...")
+
         df = mh.m2_data(periods) ##########
         if df is not None and not df.empty:
-            # Convert DataFrame to string format
-            body = df.to_string()
-            await ctx.send(f"```txt\n{body}\n```")
+            # Send visualization
+            image_buffer = ph.plot_m2(df)
+            file = discord.File(fp=image_buffer, filename="m2_chart.png")
+            await ctx.send(file=file)
         else:
             await ctx.send("Failed to retrieve M2 Money Supply data.")
 
     @commands.command(name='price_targets', help='Fetches analyst price targets for a given ticker. Example: `!price_targets AAPL`')
     async def price_targets(self, ctx, ticker: str):
-        if not ticker:
-            await ctx.send("Please provide a ticker symbol. Example: `!price_targets AAPL`")
-            return
         ticker = normalize_ticker(ticker)
         await ctx.send(f"Fetching analyst price targets for {ticker}")
         df = mh.get_price_targets(ticker) ##########
         if df is not None:
-            await ctx.send(f"```txt\n{df.to_string(index=True)}\n```")
+            buffer = ph.plot_price_targets(df)
+            file = discord.File(fp=buffer, filename="price_targets.png")
+            await ctx.send(file=file)
         else:
             await ctx.send("Failed to retrieve analyst price targets.")
+
+    
+    @price_targets.error
+    async def price_targets_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("Please provide a ticker symbol. Example: `!price_targets AAPL`")
+        else:
+            # Handle other errors or raise
+            raise error
     
     @commands.command(name='holders', help='Fetches major holders data for a given ticker. Example: `!holders AAPL`')
     async def holders(self, ctx, ticker: str):
-        if not ticker:
-            await ctx.send("Please provide a ticker symbol. Example: `!holders AAPL`")
-            return
         ticker = normalize_ticker(ticker) 
         await ctx.send(f"Fetching major holders data for {ticker}")
         df = mh.get_major_holders(ticker) ##########
         if df is not None:
-            await ctx.send(f"```txt\n{df.to_string(index=True)}\n```")
+            file = ph.plot_holders(df, ticker)
+            await ctx.send(file=discord.File(file, filename="major_holders.png"))
         else:
             await ctx.send("Failed to retrieve major holders data.")
+
+    @holders.error
+    async def holders_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("Please provide a ticker symbol. Example: `!holders AAPL`")
+        else:
+            # Handle other errors or raise
+            raise error
+
+    @commands.command(name='info', help='Fetches company information for a given ticker. Example: `!info AAPL`')
+    async def info(self, ctx, ticker: str):
+        ticker = normalize_ticker(ticker) 
+        await ctx.send(f"Fetching company info for {ticker}")
+        df = mh.get_info(ticker) ##########
+        if df is not None:
+            file = ph.plot_info(df)
+            await ctx.send(file=discord.File(file, filename="info.png"))
+        else:
+            await ctx.send("Failed to retrieve major holders data.")
+
+    @info.error
+    async def info_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("Please provide a ticker symbol. Example: `!info AAPL`")
+        else:
+            # Handle other errors or raise
+            raise error
+    
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(MarketCommands(bot))

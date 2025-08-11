@@ -88,3 +88,22 @@ def m2_data(periods: int) -> pd.DataFrame:
     #reverse the DataFrame to have the most recent date at the top
     return m2.iloc[::-1].head(n=periods)
 
+def get_info(ticker: str):
+    yf_ticker = yf.Ticker(ticker)
+    info = yf_ticker.info
+
+    website = info.get("website", "N/A")
+    # Defensive access with .get() to avoid KeyError if missing
+    data = {
+        "Ticker": ticker,
+        "Company Name": info.get("longName", "N/A"),
+        "Sector": info.get("sector", "N/A"),
+        "Industry": info.get("industry", "N/A"),
+        "Market Cap": info.get("marketCap", "N/A"),
+        "Full Time Employees": info.get("fullTimeEmployees", "N/A"),
+        "Country": info.get("country", "N/A"),
+    }
+
+    df = pd.DataFrame([data])
+    return df, website
+

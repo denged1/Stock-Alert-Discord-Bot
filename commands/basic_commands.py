@@ -36,6 +36,8 @@ class BasicCommands(commands.Cog):
     @commands.command(name='fud', help='self explanatory')
     async def fud(self, ctx):
         await ctx.send("Okay okay okay, I need the price to go up. I can't take this anymore. Every day, I'm checking the price and it's dipping. Every day, I check the price - bad price. I can't take this anymore, man. I have overinvested - by a lot. It is what it is. I need the price to go up. Can devs do something?")
+        await ctx.send("https://cdn.discordapp.com/attachments/1200932361399976029/1404289258839347330/iNeedPriceToGoUp.mp4?ex=689aa5c9&is=68995449&hm=740b649f9ec500434d698eaaed3971b305bfb68246ab84eb6f3d6a35b84d69f4&")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(BasicCommands(bot))

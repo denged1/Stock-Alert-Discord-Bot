@@ -10,8 +10,18 @@ def getsp500():
     Returns:
         List[str]: List of S&P 500 tickers.
     """
-    sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
-    return sp500['Symbol'].tolist()
+    spy = yf.Ticker("SPY")
+    holdings = spy.info.get("holdings")  # This may not exist in all yfinance versions
+
+    if holdings:
+        tickers = [h['symbol'] for h in holdings]
+        return tickers
+    else:
+        # Fallback: use static CSV from yfinance GitHub repo
+        import pandas as pd
+        url = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
+        df = pd.read_csv(url)
+        return df['Symbol'].tolist()
 
 
 

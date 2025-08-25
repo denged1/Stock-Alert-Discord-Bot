@@ -107,3 +107,40 @@ def get_info(ticker: str):
     df = pd.DataFrame([data])
     return df, website
 
+def get_news(ticker: str):
+    stock = yf.Ticker(ticker)
+    hist = stock.history(period="1d", interval="1h")
+    if hist.empty:
+        perf_summary = "No available trading history for this stock"
+    else:
+        latest_price = hist["Close"].iloc[-1]
+        prev_close = stock.history(period="2d")["Close"].iloc[0]
+        pct_change = ((latest_price - prev_close) / prev_close) * 100
+
+        perf_summary = (
+            f"{ticker} is currently trading at ${latest_price:.2f}, "
+            f"{pct_change:+.2f}% compared to the last close (${prev_close:.2f})."
+        )
+    
+    news_items = stock.news
+    if not news_items:
+        return perf_summary, None
+
+    formatted_news = []
+    for item in news_items:
+        content = item.get("content", item)
+        title = content.get("title")
+        raw_link = content.get("clickThroughUrl") or content.get("link") or content.get("url")
+        if isinstance(raw_link, dict):
+            link = raw_link.get("url")
+        else:
+            link = raw_link
+
+        # Discord embed-friendly format: [Title](URL)
+        if link is not None:
+            embedded_link = f"[{title}]({link})"
+            formatted_news.append({"Headline": embedded_link})
+
+    df = pd.DataFrame(formatted_news)
+    return df.dropna(subset=["Headline"]).reset_index(drop=True), perf_summary
+

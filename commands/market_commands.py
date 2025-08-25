@@ -144,10 +144,32 @@ class MarketCommands(commands.Cog):
             await ctx.send(file=discord.File(file, filename="info.png"))
             await ctx.send(link)
         else:
-            await ctx.send("Failed to retrieve major holders data.")
+            await ctx.send("Failed to retrieve company info.")
 
     @info.error
     async def info_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("Please provide a ticker symbol. Example: `!info AAPL`")
+        else:
+            # Handle other errors or raise
+            raise error
+        
+    @commands.command(name='news', help='Fetches company information for a given ticker. Example: `!info AAPL`')
+    async def news(self, ctx, ticker: str, amount: int = 3):
+        ticker = normalize_ticker(ticker) 
+        amount = max(1, min(amount, 10))
+        await ctx.send(f"Fetching news for {ticker}")
+        df, perf = mh.get_news(ticker) ##########
+        print(df)
+        if df is not None:
+            await ctx.send(perf)
+            for headline in df["Headline"].head(amount):
+                await ctx.send(f"<{headline}>")
+        else:
+            await ctx.send("Failed to retrieve news.")
+
+    @news.error
+    async def news_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send("Please provide a ticker symbol. Example: `!info AAPL`")
         else:

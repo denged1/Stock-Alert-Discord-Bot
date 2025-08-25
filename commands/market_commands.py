@@ -155,7 +155,7 @@ class MarketCommands(commands.Cog):
             raise error
         
     @commands.command(name='news', help='Fetches company information for a given ticker. Example: `!info AAPL`')
-    async def news(self, ctx, ticker: str, amount: int = 2):
+    async def news(self, ctx, ticker: str, amount: int = 3):
         ticker = normalize_ticker(ticker) 
         amount = max(1, min(amount, 10))
         await ctx.send(f"Fetching news for {ticker}")
@@ -164,7 +164,7 @@ class MarketCommands(commands.Cog):
         if df is not None:
             await ctx.send(perf)
             for headline in df["Headline"].head(amount):
-                await ctx.send(f"{headline}")
+                await ctx.send(f"<{headline}>")
         else:
             await ctx.send("Failed to retrieve news.")
 

@@ -3,3 +3,4 @@
 /channels.txt
 /test.py
 /log.txt
+__pycache__/

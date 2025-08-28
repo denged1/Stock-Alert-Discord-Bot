@@ -3,8 +3,12 @@ Discord bot to give pre-market notifications on SP biggest movers 15 minutes bef
 
 Set up:
 - add a .env file into the same directory as main.py, add the line: DISCORD_TOKEN = {token}
-- install packages (Make sure to update yfinance, I had a headache with that.)
+- create and start virtual env with:
+    $python -m venv venv
+    $source venv/bin/activate
+- Install packages with $pip install -r requirements.txt
 - run main.py
+- ensure the bot has admin priv in the servers, otherwise you can't use !setchannel to add it to the alerts
 
 
 Folder structure:
